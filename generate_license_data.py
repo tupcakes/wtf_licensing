@@ -39,10 +39,11 @@ def parse_csv_to_license_structure(csv_path: Path) -> Dict[str, Any]:
     Returns a dictionary with:
     - products: dict of all product SKUs with their included service plans
     - service_plans: dict of all unique service plans
-    - supersedence_map: mapping to help identify license overlaps
+    - self_referencing_plans: dict tracking filtered self-referencing plans
     """
     products = {}
     service_plans = {}
+    self_referencing_plans = []
 
     with csv_path.open("r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
@@ -71,6 +72,21 @@ def parse_csv_to_license_structure(csv_path: Path) -> Dict[str, Any]:
                     "guid": guid,
                     "included_service_plans": [],
                 }
+
+            # Track and skip self-referencing service plans where the service plan name
+            # matches the product's string_id (these represent the core product license)
+            if service_plan_name == string_id:
+                # Track for reporting purposes
+                self_referencing_plans.append(
+                    {
+                        "product_guid": guid,
+                        "product_name": product_name,
+                        "string_id": string_id,
+                        "self_referencing_service_plan_id": service_plan_id,
+                        "note": "This service plan represents the core product license itself",
+                    }
+                )
+                continue
 
             # Add service plan to product
             service_plan_entry = {
@@ -101,11 +117,12 @@ def parse_csv_to_license_structure(csv_path: Path) -> Dict[str, Any]:
     return {
         "products": products,
         "service_plans": service_plans,
+        "self_referencing_plans": self_referencing_plans,
         "metadata": {
             "total_products": len(products),
             "total_service_plans": len(service_plans),
             "source_url": CSV_URL,
-            "description": "Complete O365 license structure showing all products and their included service plans",
+            "description": "Complete O365 license structure showing all products and their included service plans. Self-referencing service plans (where service_plan_name matches product string_id) are excluded from included_service_plans.",
         },
     }
 
@@ -135,60 +152,23 @@ def create_supersedence_analysis(license_data: Dict[str, Any]) -> Dict[str, Any]
     return supersedence_map
 
 
-def identify_self_referencing_plans(license_data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Identify products that have service plans with the same name as the product's string_id.
-    These are typically the "core" service plan that represents the product itself.
-
-    Returns information about self-referencing service plans for transparency.
-    """
-    products = license_data["products"]
-    self_referencing = []
-
-    for guid, product_info in products.items():
-        string_id = product_info["string_id"]
-        for sp in product_info["included_service_plans"]:
-            if sp["service_plan_name"] == string_id:
-                self_referencing.append(
-                    {
-                        "product_guid": guid,
-                        "product_name": product_info["product_display_name"],
-                        "string_id": string_id,
-                        "self_referencing_service_plan_id": sp["service_plan_id"],
-                        "note": "This service plan represents the core product license itself",
-                    }
-                )
-                break  # Only one self-referencing plan per product
-
-    return {
-        "count": len(self_referencing),
-        "description": "Products where a service plan name matches the product's string_id. These are filtered from overlap detection to prevent incorrectly identifying a product as superseded when it's the core license itself.",
-        "self_referencing_products": self_referencing,
-    }
-
-
 def find_overlapping_licenses(license_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Find all pairs of licenses where one completely contains the other's service plans.
     This helps identify when users might be doubled up on licenses.
 
-    Note: Excludes self-referencing service plans (where the service plan name
-    matches the product's string_id) to avoid incorrectly flagging a product
-    as superseded by another when the "core" service plan is the product itself.
+    Note: Self-referencing service plans are already filtered during parsing,
+    so they won't affect overlap detection.
     """
     products = license_data["products"]
     overlaps = []
 
     # Create a map of product GUID to set of service plan IDs
-    # Exclude self-referencing service plans to avoid false positives
     product_service_plans = {}
     for guid, product_info in products.items():
-        string_id = product_info["string_id"]
-        # Filter out service plans that have the same name as the product's string_id
+        # Self-referencing plans already filtered during parsing
         product_service_plans[guid] = set(
-            sp["service_plan_id"]
-            for sp in product_info["included_service_plans"]
-            if sp["service_plan_name"] != string_id
+            sp["service_plan_id"] for sp in product_info["included_service_plans"]
         )
 
     # Compare each product pair
@@ -261,12 +241,16 @@ def main():
 
     # Parse the CSV
     print("Parsing CSV and building license structure...")
+    print("  (filtering out self-referencing service plans...)")
     license_data = parse_csv_to_license_structure(csv_path)
 
-    # Identify self-referencing service plans
-    print("Identifying self-referencing service plans...")
-    self_referencing_info = identify_self_referencing_plans(license_data)
-    license_data["self_referencing_plans"] = self_referencing_info
+    # Format self-referencing plans info
+    self_referencing_list = license_data.pop("self_referencing_plans")
+    license_data["self_referencing_plans"] = {
+        "count": len(self_referencing_list),
+        "description": "Products where a service plan name matches the product's string_id. These have been filtered from included_service_plans to prevent incorrectly identifying a product as superseded when it's the core license itself.",
+        "self_referencing_products": self_referencing_list,
+    }
 
     # Create supersedence analysis
     print("Creating supersedence analysis...")
@@ -274,7 +258,7 @@ def main():
     license_data["supersedence_map"] = supersedence_map
 
     # Find overlapping licenses
-    print("Finding overlapping licenses (excluding self-referencing plans)...")
+    print("Finding overlapping licenses...")
     overlaps = find_overlapping_licenses(license_data)
     license_data["license_overlaps"] = {"count": len(overlaps), "overlaps": overlaps}
 
