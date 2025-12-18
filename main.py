@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
 
 # initialize FastAPI app
 app = FastAPI(
-    title="WTF Licnensing API",
+    title="WTF Licensing API",
     summary="",
     description="""
     fill this out later
