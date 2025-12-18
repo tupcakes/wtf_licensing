@@ -19,6 +19,9 @@ The MS csv data also doesn't explicitly state ALL relationships. For example SPE
 - /api/license/all
   - Returns all license data.
 
+
+Try it out here: <https://wtf-licensing.onrender.com>
+
 ## Installation
 
 ```bash
