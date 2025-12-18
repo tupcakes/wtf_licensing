@@ -35,7 +35,7 @@ async def get_license_metadata(
     return license_data
 
 
-@router.get("/licenses/{sku}", tags=[Tags.LICENSING], name="Get License by SKU")
+@router.get("/licenses/sku/{sku}", tags=[Tags.LICENSING], name="Get License by SKU")
 async def get_license_by_sku(
     sku: str, ms_licensing: LicenseDataService = Depends(get_ms_licensing_service)
 ):
