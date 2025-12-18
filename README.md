@@ -1,12 +1,20 @@
 # O365 License Data Service
 
-Python API for querying MS O365 licensing relationships
+Python API for querying MS O365 licensing relationships.
+
+## About
+
+I discovered that MS provides their O365 license relationships in a csv located [here](https://learn.microsoft.com/en-us/entra/identity/users/licensing-service-plan-reference). Something that I'm sure everyone who has had to use O365 is figuring out what license supersedes/includes other products, so I created an api to return the relationships between related MS O365 products.
+
+I did use AI to create the logic for parsing the Microsoft licensing CSV file in license_data_service.py, because lets be honest...even MS' licensing people usually can't make heads or tails out of their own licensing, and I didn't want to have to become a O365 licensing expert. So the use of AI is something to be aware of.
+
+The MS csv data also doesn't explicitly state ALL relationships. For example SPE_E5 should supersede SPE_E3, since it has all the same service plans and more (or at least upgraded versions of the service plans included in SPE_E3). However the CSV file doesn't show that relationship. So I had to setup some special logic with the naming pattens of the skus that infer supersedence in cases like I just described. So YMMV. If you find something not right with the supersedence in the returned data, let me know.
 
 ## API Endpoints Availble
 
 - /api/license/metadata
   - Returns data source, last refresh time, etc...
-- /api/license/superseded/{sku}
+- /api/license/{sku}
   - Returns the supersedence relationships for a particular license sku
 - /api/license/all
   - Returns all license data.
@@ -15,7 +23,7 @@ Python API for querying MS O365 licensing relationships
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/tupcakes/wtf_licensing.git
 cd wtf_licensing
 
 # Run directly
@@ -28,24 +36,35 @@ Each product in the generated data includes:
 
 ```json
 {
-  "guid": "product-guid",
+  "guid": "6fd2c87f-b296-42f0-b197-1e91e994b900",
   "product_display_name": "Office 365 E3",
   "string_id": "ENTERPRISEPACK",
   "included_service_plans": [
     {
-      "service_plan_name": "EXCHANGE_S_ENTERPRISE",
-      "service_plan_id": "plan-guid",
-      "service_plan_friendly_name": "Exchange Online (Plan 2)"
-    }
+      "service_plan_name": "MESH_AVATARS_FOR_TEAMS",
+      "service_plan_id": "dcf9d2f4-772e-4434-b757-77a453cfbc02",
+      "service_plan_friendly_name": "Avatars for Teams"
+    },
+    {
+      "service_plan_name": "MESH_AVATARS_ADDITIONAL_FOR_TEAMS",
+      "service_plan_id": "3efbd4ed-8958-4824-8389-1321f8730af8",
+      "service_plan_friendly_name": "Avatars for Teams (additional)"
+    },
+    ...and more
   ],
   "supersedes": [
     {
-      "guid": "other-product-guid",
-      "string_id": "STANDARDPACK",
-      "name": "Office 365 E1"
-    }
-  ],
-  "superseded_by": []
+      "guid": "d2dea78b-507c-4e56-b400-39447f4738f8",
+      "string_id": "CDSAICAPACITY",
+      "name": "AI Builder Capacity add-on"
+    },
+    {
+      "guid": "631d5fb1-a668-4c2a-9427-8830665a742e",
+      "string_id": "CDS_FILE_CAPACITY",
+      "name": "Common Data Service for Apps File Capacity"
+    },
+    ...and more
+  ]
 }
 ```
 
