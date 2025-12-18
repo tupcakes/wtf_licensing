@@ -1,4 +1,3 @@
-import asyncio
 import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager

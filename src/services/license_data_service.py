@@ -18,7 +18,8 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Set
-from urllib.request import urlretrieve
+import aiohttp
+import aiofiles
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ class LicenseDataService:
             self._initialized = True
             logger.info("LicenseDataService initialized")
 
-    def download_csv(self, url: str, output_path: Path) -> None:
+    async def download_csv(self, url: str, output_path: Path) -> None:
         """
         Download the license CSV from Microsoft.
 
@@ -59,13 +60,18 @@ class LicenseDataService:
         """
         logger.info(f"Downloading CSV from {url}...")
         try:
-            urlretrieve(url, output_path)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    content = await response.read()
+                    async with aiofiles.open(output_path, "wb") as f:
+                        await f.write(content)
             logger.info(f"Downloaded to {output_path}")
         except Exception as e:
             logger.error(f"Error downloading CSV: {e}")
             raise
 
-    def parse_csv(self, csv_path: Path) -> Dict[str, Dict[str, Any]]:
+    async def parse_csv(self, csv_path: Path) -> Dict[str, Dict[str, Any]]:
         """
         Parse the license CSV and build product structure.
 
@@ -80,8 +86,9 @@ class LicenseDataService:
         logger.info("Parsing CSV and building license structure...")
         logger.info("  (filtering out self-referencing service plans...)")
 
-        with open(csv_path, "r", encoding="utf-8-sig") as csvfile:
-            reader = csv.DictReader(csvfile)
+        async with aiofiles.open(csv_path, "r", encoding="utf-8-sig") as csvfile:
+            content = await csvfile.read()
+            reader = csv.DictReader(content.splitlines())
 
             for row in reader:
                 product_name = row["Product_Display_Name"].strip()
@@ -263,7 +270,7 @@ class LicenseDataService:
                         }
                     )
 
-    def generate_license_data(
+    async def generate_license_data(
         self,
         use_local: bool = False,
         local_csv_path: str | None = None,
@@ -304,10 +311,10 @@ class LicenseDataService:
             logger.info(f"Using local CSV file: {csv_path}")
         else:
             csv_path = Path(__file__).parent.parent.parent / "o365_licenses_temp.csv"
-            self.download_csv(self.CSV_URL, csv_path)
+            await self.download_csv(self.CSV_URL, csv_path)
 
         # Parse CSV and build product structure
-        self.products = self.parse_csv(csv_path)
+        self.products = await self.parse_csv(csv_path)
 
         # Add supersedence relationships
         self.add_supersedence_relationships(self.products)
@@ -350,11 +357,34 @@ class LicenseDataService:
 
         # Export to JSON if path provided
         if output_json_path:
-            self.export_to_json(output_json_path)
+            await self.export_to_json(output_json_path)
 
         return license_data
 
-    def export_to_json(self, output_path: str | Path) -> None:
+    async def load_license_data_from_file(self, json_path: str | Path) -> None:
+        """
+        Load license data from a JSON file.
+
+        Args:
+            json_path: Path to the JSON file to load
+        """
+        json_path = Path(json_path)
+
+        if not json_path.exists():
+            raise FileNotFoundError(f"JSON file not found at {json_path}")
+
+        logger.info(f"Loading license data from {json_path}...")
+
+        async with aiofiles.open(json_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+            license_data = json.loads(content)
+
+        self.products = license_data.get("products", {})
+        self.metadata = license_data.get("metadata", {})
+
+        logger.info(f"Loaded {len(self.products)} products from cache")
+
+    async def export_to_json(self, output_path: str | Path) -> None:
         """
         Export the license data to a JSON file.
 
@@ -362,7 +392,7 @@ class LicenseDataService:
             output_path: Path where JSON should be saved
         """
         if not self.products:
-            self.generate_license_data(
+            await self.generate_license_data(
                 local_csv_path=self.CSV_URL,
             )
             # raise RuntimeError(
@@ -375,8 +405,8 @@ class LicenseDataService:
 
         logger.info(f"Writing simplified license data to {output_path}...")
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(license_data, f, indent=2, ensure_ascii=False)
+        async with aiofiles.open(output_path, "w", encoding="utf-8") as f:
+            await f.write(json.dumps(license_data, indent=2, ensure_ascii=False))
 
         file_size_mb = output_path.stat().st_size / (1024 * 1024)
 
