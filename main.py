@@ -23,6 +23,8 @@ async def lifespan(app: FastAPI):
     ms_licensing = LicenseDataService()
 
     # Load or generate license data
+    # TODO - force refresh at startup
+    # TODO - implement scheduler
     cache_file = "/tmp/o365_licenses.json"
     if os.path.exists(cache_file):
         print(f"Using cached license data: {cache_file}")

@@ -270,6 +270,79 @@ class LicenseDataService:
                         }
                     )
 
+        # Apply known upgrade patterns (e.g., E3 -> E5)
+        logger.info("  (applying known license upgrade patterns...)")
+        self._apply_upgrade_patterns(products)
+
+    def _apply_upgrade_patterns(self, products: Dict[str, Dict[str, Any]]) -> None:
+        """
+        Apply known upgrade patterns where higher-tier licenses supersede lower-tier ones.
+
+        This handles cases where Microsoft uses different service plan IDs for the same
+        feature at different license levels (e.g., STREAM_O365_E3 vs STREAM_O365_E5).
+
+        Args:
+            products: Dictionary of all products
+        """
+        # Define known upgrade patterns: (base_pattern, upgrade_pattern)
+        upgrade_patterns = [
+            # Microsoft 365 E3 -> E5
+            ("SPE_E3", "SPE_E5"),
+            # Office 365 E3 -> E5
+            ("ENTERPRISEPACK", "ENTERPRISEPREMIUM"),
+            # Microsoft 365 Business Basic -> Standard -> Premium
+            ("O365_BUSINESS_ESSENTIALS", "O365_BUSINESS_PREMIUM"),
+            ("SMB_BUSINESS", "O365_BUSINESS_PREMIUM"),
+            ("SPB", "O365_BUSINESS_PREMIUM"),
+            # Microsoft 365 A3 -> A5 (Education)
+            ("M365EDU_A3_FACULTY", "M365EDU_A5_FACULTY"),
+            ("M365EDU_A3_STUDENT", "M365EDU_A5_STUDENT"),
+            # EMS E3 -> E5
+            ("EMS", "EMSPREMIUM"),
+            # Microsoft 365 F1 -> F3
+            ("M365_F1", "SPE_F1"),
+        ]
+
+        # Build a reverse lookup: string_id -> guid
+        string_id_to_guid = {prod["string_id"]: guid for guid, prod in products.items()}
+
+        for base_string_id, upgrade_string_id in upgrade_patterns:
+            if (
+                base_string_id in string_id_to_guid
+                and upgrade_string_id in string_id_to_guid
+            ):
+                base_guid = string_id_to_guid[base_string_id]
+                upgrade_guid = string_id_to_guid[upgrade_string_id]
+
+                base_product = products[base_guid]
+                upgrade_product = products[upgrade_guid]
+
+                # Check if this relationship doesn't already exist
+                already_supersedes = any(
+                    s["guid"] == base_guid for s in upgrade_product["supersedes"]
+                )
+
+                if not already_supersedes:
+                    # Add the upgrade relationship
+                    upgrade_product["supersedes"].append(
+                        {
+                            "guid": base_guid,
+                            "string_id": base_product["string_id"],
+                            "name": base_product["product_display_name"],
+                        }
+                    )
+                    base_product["superseded_by"].append(
+                        {
+                            "guid": upgrade_guid,
+                            "string_id": upgrade_product["string_id"],
+                            "name": upgrade_product["product_display_name"],
+                        }
+                    )
+                    logger.info(
+                        f"    Applied upgrade pattern: {upgrade_product['product_display_name']} "
+                        f"supersedes {base_product['product_display_name']}"
+                    )
+
     async def generate_license_data(
         self,
         use_local: bool = False,
