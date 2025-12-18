@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "apscheduler>=3.11.1",
+    "fastapi[standard]>=0.125.0",
+    "ruff>=0.14.9",
+    "sqlmodel>=0.0.27",
+]

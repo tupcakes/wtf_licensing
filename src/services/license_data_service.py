@@ -362,9 +362,12 @@ class LicenseDataService:
             output_path: Path where JSON should be saved
         """
         if not self.products:
-            raise RuntimeError(
-                "No license data available. Call generate_license_data() first."
+            self.generate_license_data(
+                local_csv_path=self.CSV_URL,
             )
+            # raise RuntimeError(
+            #     "No license data available. Call generate_license_data() first."
+            # )
 
         output_path = Path(output_path)
 

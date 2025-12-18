@@ -1,77 +1,56 @@
-"""
-Example usage of the LicenseDataService.
+import asyncio
+import os
+from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-This script demonstrates how to use the singleton service to generate
-O365 license data with supersedence relationships.
-"""
-
-import argparse
-from pathlib import Path
-from src.services import LicenseDataService
+from src.routers.api import licensing_api
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate O365 license data with supersedence relationships"
-    )
-    parser.add_argument(
-        "--use-local",
-        action="store_true",
-        help="Use local CSV file instead of downloading from Microsoft",
-    )
-    parser.add_argument(
-        "--local-csv", type=str, help="Path to local CSV file (used with --use-local)"
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default="o365_licenses_simple.json",
-        help="Output JSON file path (default: o365_licenses_simple.json)",
-    )
+from src.services.license_data_service import LicenseDataService
 
-    args = parser.parse_args()
-
-    # Get the singleton service instance
-    service = LicenseDataService()
-
-    # Generate license data
-    try:
-        service.generate_license_data(
-            use_local=args.use_local,
-            local_csv_path=args.local_csv,
-            output_json_path=args.output,
-        )
-
-        # Example: Access specific product data
-        print("\nExample queries:")
-        print("-" * 60)
-
-        # Get metadata
-        metadata = service.get_metadata()
-        print(f"Total products loaded: {metadata['total_products']}")
-
-        # Get all products and show first one as example
-        all_products = service.get_all_products()
-        if all_products:
-            first_guid = next(iter(all_products.keys()))
-            first_product = all_products[first_guid]
-            print(f"\nExample product:")
-            print(f"  Name: {first_product['product_display_name']}")
-            print(f"  String ID: {first_product['string_id']}")
-            print(f"  GUID: {first_product['guid']}")
-            print(f"  Service plans: {len(first_product['included_service_plans'])}")
-            print(f"  Supersedes: {len(first_product['supersedes'])} products")
-            print(f"  Superseded by: {len(first_product['superseded_by'])} products")
-
-        print("\n✓ Service can be accessed again via: service = LicenseDataService()")
-        print("  (returns the same singleton instance with cached data)")
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-    return 0
+# Initialize global services
+ms_licensing = None
 
 
-if __name__ == "__main__":
-    exit(main())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI app."""
+    global ms_licensing
+
+    print("App Startup - Initializing services...")
+    print("-" * 60)
+
+    # Initialize Services
+    ms_licensing = LicenseDataService()
+
+    # Load or generate license data
+    cache_file = "/tmp/o365_licenses.json"
+    if os.path.exists(cache_file):
+        print(f"Using cached license data: {cache_file}")
+        await ms_licensing.load_license_data_from_file(cache_file)
+    else:
+        print("Downloading fresh license data...")
+        await ms_licensing.export_to_json(cache_file)
+
+    print("-" * 60)
+    print("App startup complete\n")
+
+    yield
+    print("App Shutdown - Cleaning up services...")
+    # Perform any necessary cleanup here
+
+    print("App shutdown complete\n")
+
+
+# initialize FastAPI app
+app = FastAPI(
+    title="WTF Licnensing API",
+    summary="",
+    description="""
+    fill this out later
+    """,
+    lifespan=lifespan,
+)
+
+# Include API routers
+app.include_router(licensing_api.router)
