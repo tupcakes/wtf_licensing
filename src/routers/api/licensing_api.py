@@ -19,20 +19,54 @@ def get_ms_licensing_service() -> LicenseDataService:
     return ms_licensing
 
 
-@router.get("/licenses/sku/{sku}", tags=[Tags.LICENSING], name="Get License by SKU")
+@router.get("/licenses/metadata", tags=[Tags.LICENSING], name="Get license metaddata")
+async def get_license_metadata(
+    ms_licensing: LicenseDataService = Depends(get_ms_licensing_service),
+):
+    """Get license metadata."""
+    # Check if data is loaded
+    if not await ms_licensing.get_metadata():
+        return {
+            "error": "License data not loaded yet. Please wait for app startup to complete."
+        }
+
+    license_data = await ms_licensing.get_metadata()
+
+    return license_data
+
+
+@router.get(
+    "/licenses/superseded/{sku}", tags=[Tags.LICENSING], name="Get License by SKU"
+)
 async def get_license_by_sku(
     sku: str, ms_licensing: LicenseDataService = Depends(get_ms_licensing_service)
 ):
     """Get license information by SKU."""
     # Check if data is loaded
-    if not ms_licensing.get_all_products():
+    if not await ms_licensing.get_metadata():
         return {
             "error": "License data not loaded yet. Please wait for app startup to complete."
         }
 
-    license_data = ms_licensing.get_product_by_string_id(sku)
+    license_data = await ms_licensing.get_product_by_string_id(sku)
 
     if not license_data:
         return {"error": f"License with SKU '{sku}' not found"}
+
+    return license_data
+
+
+@router.get("/licenses/all", tags=[Tags.LICENSING], name="Get license data")
+async def get_all_licenses(
+    ms_licensing: LicenseDataService = Depends(get_ms_licensing_service),
+):
+    """Get all licence data."""
+    # Check if data is loaded
+    if not await ms_licensing.get_metadata():
+        return {
+            "error": "License data not loaded yet. Please wait for app startup to complete."
+        }
+
+    license_data = await ms_licensing.get_all_products()
 
     return license_data

@@ -491,17 +491,17 @@ class LicenseDataService:
         """Get a product by its GUID."""
         return self.products.get(guid)
 
-    def get_product_by_string_id(self, string_id: str) -> Dict[str, Any] | None:
+    async def get_product_by_string_id(self, string_id: str) -> Dict[str, Any] | None:
         """Get a product by its string ID."""
         for product in self.products.values():
             if product["string_id"] == string_id:
                 return product
         return None
 
-    def get_all_products(self) -> Dict[str, Dict[str, Any]]:
+    async def get_all_products(self) -> Dict[str, Dict[str, Any]]:
         """Get all products."""
         return self.products
 
-    def get_metadata(self) -> Dict[str, Any]:
+    async def get_metadata(self) -> Dict[str, Any]:
         """Get metadata about the license data."""
         return self.metadata
