@@ -14,7 +14,7 @@ The MS csv data also doesn't explicitly state ALL relationships. For example SPE
 
 - /api/license/metadata
   - Returns data source, last refresh time, etc...
-- /api/license/{sku}
+- /api/license/sku/{sku}
   - Returns the supersedence relationships for a particular license sku
 - /api/license/all
   - Returns all license data.

@@ -287,7 +287,7 @@ class LicenseDataService:
         # Define known upgrade patterns: (base_pattern, upgrade_pattern)
         upgrade_patterns = [
             # Microsoft 365 E3 -> E5
-            ("SPE_E3", "SPE_E5"),
+            ('SPE_E3', 'SPE_E5'),
             # Office 365 E3 -> E5
             ("ENTERPRISEPACK", "ENTERPRISEPREMIUM"),
             # Microsoft 365 Business Basic -> Standard -> Premium
@@ -301,6 +301,14 @@ class LicenseDataService:
             ("EMS", "EMSPREMIUM"),
             # Microsoft 365 F1 -> F3
             ("M365_F1", "SPE_F1"),
+            # Microsoft 365 F1 Communications -> F3
+            ("M365_F1_COMM", "SPE_F1"),
+            # Entra ID P1 -> P2
+            ("AAD_PREMIUM", "AAD_PREMIUM_P2"),
+            # Microsoft 365 F1/F3 -> E5
+            ("M365_F1_COMM", "SPE_E5"),
+            ("SPE_F1", "SPE_E5"),
+            ("M365_F1", "SPE_E5")
         ]
 
         # Build a reverse lookup: string_id -> guid
