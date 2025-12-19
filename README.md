@@ -19,8 +19,7 @@ The MS csv data also doesn't explicitly state ALL relationships. For example SPE
 - /api/license/all
   - Returns all license data.
 
-
-Try it out here: <https://wtf-licensing.onrender.com/docs>
+Try it out here (render.com free plan takes about 3 seconds to spin up if idle): <https://wtf-licensing.onrender.com/docs>
 
 ## Installation
 
