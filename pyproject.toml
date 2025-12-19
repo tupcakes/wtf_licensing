@@ -9,8 +9,6 @@ dependencies = [
     "aiohttp>=3.13.2",
     "apscheduler>=3.11.1",
     "fastapi[standard]>=0.125.0",
-    "pydantic>=2.12.5",
-    "pydantic-core>=2.41.5",
     "ruff>=0.14.9",
     "sqlmodel>=0.0.27",
 ]
