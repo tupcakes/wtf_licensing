@@ -10,6 +10,8 @@ I did use AI to create the logic for parsing the Microsoft licensing CSV file in
 
 The MS csv data also doesn't explicitly state ALL relationships. For example SPE_E5 should supersede SPE_E3, since it has all the same service plans and more (or at least upgraded versions of the service plans included in SPE_E3). However the CSV file doesn't show that relationship. So I had to setup some special logic with the naming pattens of the skus that infer supersedence in cases like I just described. So YMMV. If you find something not right with the supersedence in the returned data, let me know.
 
+In theory this api can be used in concert with Get-MgUserLicenseDetails and Set-MgUserLicenseDetails to automate cleaning up over licensed users.
+
 ## API Endpoints Availble
 
 - /api/license/metadata
