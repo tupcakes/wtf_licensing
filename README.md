@@ -102,6 +102,8 @@ Clone the repo.
 
 ## Running in prod
 
+### Local
+
 `uv sync`
 
 `uv run fastapi run main.py'
