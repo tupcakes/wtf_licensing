@@ -1,0 +1,22 @@
+services:
+  wtf-licensing-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wtf-licensing-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - licensing-cache:/tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  licensing-cache:
