@@ -85,3 +85,27 @@ The service automatically:
 2. Compares all products pairwise
 3. Identifies subset relationships
 4. Builds bidirectional supersedence arrays
+
+## Building for dev
+
+### Local
+
+Clone the repo.
+
+`uv sync`
+
+`uv run fastapi dev main.py`
+
+### Docker
+
+`sh build.sh`
+
+## Running in prod
+
+`uv sync`
+
+`uv run fastapi run main.py'
+
+### Docker
+
+`docker compose up -d`
