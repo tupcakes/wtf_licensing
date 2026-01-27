@@ -21,7 +21,7 @@ In theory this api can be used in concert with Get-MgUserLicenseDetails and Set-
 - /api/license/all
   - Returns all license data.
 
-Try it out here (render.com free plan takes about 30 seconds to spin up if idle): <https://wtf-licensing.onrender.com/docs>
+~~Try it out here (render.com free plan takes about 30 seconds to spin up if idle): <https://wtf-licensing.onrender.com/docs>~~ Currently down.
 
 ## Installation
 
